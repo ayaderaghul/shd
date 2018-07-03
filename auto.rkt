@@ -89,8 +89,18 @@
   (define pl (make-informed-player nodes#))
   (uninform-player pl nodes#))
 
+(define (p1) (make-player 1))
+(define (p2) (make-player 2))
+(define (p3) (make-player 4))
 
-      
+(define pl1 (p1))
+(define pl2 (p2))
+(define pl3 (p3))
+
+(define (reset pl)
+(match-define (player p d n) pl)
+(player 0 d n))      
+
 ;; MUTATION
 ;; mutate action or mutate the ignorance state
 
@@ -107,106 +117,116 @@
 
 ;; mutate ignorance state
 
+(define (delete ls counter)
+  (define len (length ls))
+  (cond [(zero? counter) ls]
+        [else
+         (delete (remove (list-ref ls (random len)) ls) (- counter 1))]))
+
+(define (delete-node a-list)
+  (define l (length a-list))
+  (define can-delete (random (+ 1 l)))
+  (define l2 (delete a-list can-delete))
+  (if (= 1 (length l2)) '() l2))
+
+(define (add ls counter from)
+  (define len (length from))
+  (cond [(zero? counter) ls]  
+        [else
+         (define r (random len))
+         (define s (list-ref from r))
+         (add (cons s ls) (- counter 1) (remove s from))]))
+  
+(define (add-node a-list full)
+  (define can-add (remove* a-list full))
+  (define l (length can-add))
+  (define r# (random (+ 1 l)))
+  (add a-list r# can-add))
+  
+
 (define (mutate-ignorance pl)
   (match-define (player p d n) pl)
   (define nodes# (hash-count n))
+  (define v (build-list nodes# values))
   (define l (length d))
   (define new-d
-    (cond [(= l nodes#) (remove (random l) d)]
-          [(= l 0) (
+    (cond [(= l nodes#) (delete-node d)]
+          [(= l 0)
+           (define r (random nodes#))
+           (define r2 (random-member (remove r v)))
+           (list r r2)]
+          [(= l 2)
+           (cons (random-member (remove* d v)) d)]
+          [else
+           (define r3 (random 2))
+           (if (zero? r3) (add-node d v) (delete-node d))]))
+  (cond [(null? new-d) (player p new-d n)]
+        [else
+         (define a (first new-d))
+         (define act (hash-ref n a))
+         (for ([i (in-list (rest new-d))])
+           (hash-set! n i act))
+         (player p new-d n)]))
+           
+
+(define (mutate pl)
+  (match-define (player p d n) pl)
+  (define r (random 2))
+  (if (= 1 (hash-count n)) (mutate-action pl)
+      (if (zero? r) (mutate-action pl) (mutate-ignorance pl))))
 
 ;; IMMUTABLE MUTATION
 
-(define PAYOFF-TABLE
+(define PAYOFF-TABLE1
   (list
-   (list (cons 1 1) (cons 6 2))
-   (list (cons 2 6) (cons 4 4))
+   (list
+    (list (list -8/3 -8/3 -8/3) (list -1 -1 0))
+    (list (list -1 0 -1) (list 4 0 0)))
+   (list
+    (list (list 0 -1 -1) (list 0 4 0))
+    (list (list 0 0 4) (list 4/3 4/3 4/3)))
    ))
 
+(define PAYOFF-TABLE
+  (list
+   (list
+    (list (list 1 1 1) (list 6 6 9))
+    (list (list 6 9 6) (list 21 9 9)))
+   (list
+    (list (list 9 6 6) (list 9 21 9))
+    (list (list 9 9 21) (list 13 13 13)))
+   ))
 
-(define (payoff action1 action2)
+(define (payoff action1 action2 action3)
   (list-ref
-   (list-ref PAYOFF-TABLE action1)
-   action2))
+   (list-ref
+    (list-ref PAYOFF-TABLE action1)
+    action2)
+  action3))
 
-(define (interact au1 au2)
-  (match-define (automaton head1 body1) au1)
-  (match-define (automaton head2 body2) au2)
-  (define-values (next1 next2 pay1 pay2 results)
-    (for/fold ([current1 (hash-ref head1 'INIT)]
-               [current2 (hash-ref head2 'INIT)]
-               [payoff1 (hash-ref head1 'PAY)]
-               [payoff2 (hash-ref head2 'PAY)]
-               [results '()])
-              ([_ (in-list DELTAS)])
-      (match-define (state action1 dispatch1) (hash-ref body1 current1))
-      (match-define (state action2 dispatch2) (hash-ref body2 current2))
-      (match-define (cons pay1 pay2) (payoff action1 action2))
-      (define n1 (hash-ref dispatch1 action2))
-      (define n2 (hash-ref dispatch2 action1))
-      (define result (list pay1 pay2))
-      (values n1 n2
-              (+ payoff1 (* _ pay1))
-              (+ payoff2 (* _ pay2))
-              (cons result results))))
-  (values 
-   ;; (reverse results)
-   (automaton (hash-set head1 'PAY (round5 pay1)) body1)
-   (automaton (hash-set head2 'PAY (round5 pay2)) body2)))
+(define (convert a1 a2)
+  (cond [(and (zero? a1) (zero? a2)) 0]
+        [(and (zero? a1) (= 1 a2)) 1]
+        [(and (= 1 a1) (zero? a2)) 2]
+        [(and (= 1 a1) (= 1 a2)) 3]))
+        
+(define (interact au1 au2 au3)
+  (match-define (player p1 d1 n1) au1)
+  (match-define (player p2 d2 n2) au2)
+  (match-define (player p3 d3 n3) au3)
+  (define a1 (hash-ref n1 0))
+  (define a2 (hash-ref n2 a1))
+  (define a3 (hash-ref n3 (convert a1 a2)))
+  (match-define (list pay1 pay2 pay3) (payoff a1 a2 a3))
+  (list
+   (player pay1 d1 n1)
+   (player pay2 d2 n2)
+   (player pay3 d3 n3)))
 
-(define (interact-r au1 au2)
-  (match-define (automaton head1 body1) au1)
-  (match-define (automaton head2 body2) au2)
-  (define-values (next1 next2 pay1 pay2 results)
-    (for/fold ([current1 (hash-ref head1 'INIT)]
-               [current2 (hash-ref head2 'INIT)]
-               [payoff1 (hash-ref head1 'PAY)]
-               [payoff2 (hash-ref head2 'PAY)]
-               [results '()])
-              ([_ (in-list DELTAS)])
-      (match-define (state action1 dispatch1) (hash-ref body1 current1))
-      (match-define (state action2 dispatch2) (hash-ref body2 current2))
-      (match-define (cons pay1 pay2) (payoff action1 action2))
-      (define n1 (hash-ref dispatch1 action2))
-      (define n2 (hash-ref dispatch2 action1))
-      (define result (list pay1 pay2))
-      (values n1 n2
-              (+ payoff1 (* _ pay1))
-              (+ payoff2 (* _ pay2))
-              (cons result results))))
-  (cons
-   ;; (reverse results)
-(round1 pay1) (round1 pay2))) 
-
-(define (interact-s au1 au2)
-  (match-define (automaton head1 body1) au1)
-  (match-define (automaton head2 body2) au2)
-  (define-values (next1 next2 pay1 pay2 results)
-    (for/fold ([current1 (hash-ref head1 'INIT)]
-               [current2 (hash-ref head2 'INIT)]
-               [payoff1 (hash-ref head1 'PAY)]
-               [payoff2 (hash-ref head2 'PAY)]
-               [results '()])
-              ([_ (in-list DELTAS)])
-      (match-define (state action1 dispatch1) (hash-ref body1 current1))
-      (match-define (state action2 dispatch2) (hash-ref body2 current2))
-      (match-define (cons pay1 pay2) (payoff action1 action2))
-      (define n1 (hash-ref dispatch1 action2))
-      (define n2 (hash-ref dispatch2 action1))
-      (define result (list pay1 pay2))
-      (values n1 n2
-              (+ payoff1 (* _ pay1))
-              (+ payoff2 (* _ pay2))
-              (cons result results))))
-  (values 
-   (take (reverse results) 20)
-   (automaton (hash-set head1 'PAY (round5 pay1)) body1)
-   (automaton (hash-set head2 'PAY (round5 pay2)) body2)))
-    
-
+#|
 ;;benchmark
 
-(define BENCHMARKS (list (H) (D)   ))
+(define BENCHMARKS (list (H) (D)))
 
 (define (benchmark au)
   (cons (interact-r au au)
