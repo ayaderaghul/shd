@@ -71,139 +71,51 @@
          updated-init (cons next updated-init)))
    (list (first a-list))
    (rest a-list)))
-            
-     
+
 (define (uninform-player pl nodes#)
   (cond [(= nodes# 1) pl]
         [else
          (match-define (player p d n) pl)
-         (define to-activate (simplify (activate-these-dashes nodes#)))
-         (for ([i (in-list to-activate)])
-           (match-define (cons node1 node2) i)
-           (define a (hash-ref n node1))
-           (hash-set! n node2 a))
-         (player p to-activate n)]))
+         (define to-activate (flatten (simplify 
+                                       (activate-these-dashes nodes#))))
+         (cond [(null? to-activate) pl]
+               [else
+                (for ([i (in-list (rest to-activate))])
+                  (define a (hash-ref n (first to-activate)))
+                  (hash-set! n i a))
+                (player p to-activate n)])]))
 
 (define (make-player nodes#)
   (define pl (make-informed-player nodes#))
   (uninform-player pl nodes#))
-        
-#|      
-  
 
+
+      
 ;; MUTATION
-
 ;; mutate action or mutate the ignorance state
-
-(define (member? x pair)
-  (match-define (cons a b) pair)
-  (or (= x a) (= x b)))
-
-(define (member?s x up l pairs)
-  (cond [(= up l) #f]
-        [else
-         (if 
-          (member? x (list-ref pairs up))
-          up
-          (member?s x (+ up 1) l pairs))]))
-          
-          
 
 (define (mutate-action pl)
   (match-define (player p d n) pl)
   (define nodes# (hash-count n))
   (define r (random nodes#))
-  
-  (hash-set! n r (random ACTIONS#))
+  (define a (random ACTIONS#))
+  (if (member r d) 
+      (for ([i (in-list d)])
+        (hash-set! n i a))
+      (hash-set! n r a))
   pl)
 
+;; mutate ignorance state
 
-
+(define (mutate-ignorance pl)
+  (match-define (player p d n) pl)
+  (define nodes# (hash-count n))
+  (define l (length d))
+  (define new-d
+    (cond [(= l nodes#) (remove (random l) d)]
+          [(= l 0) (
 
 ;; IMMUTABLE MUTATION
-
-(define (mutate-marginally a)
-  
-  (define l (hash-count body))
-  (define mutate-initial (random l))
-  (define mutate-state (random l))
-  (match-define (state action dispatch) 
-                (hash-ref body mutate-state))
-  (define r (random 3))
-  (define new-head
-    (cond [(zero? r) 
-           (hash-set head 'INIT mutate-initial)]
-          [else head])) ; leave head unchanged (change body)
-  (define new-body
-    (cond [(zero? r) body] ; leave body unchanged (change head)
-          [(= r 1)
-           (hash-set body mutate-state ; mutate the action in the state
-                     (state (random-action) dispatch))]
-          [(= r 2)
-           (hash-set body mutate-state ; mutate the dispatching rule in the state
-                     (state action
-                            (hash-set dispatch (random-action) (random l))))]))
-  (automaton new-head new-body))
-
-(define (add-state a)
-  (match-define (automaton head body) a)
-  (define l (hash-count body))
-  (define (make-transition)
-    (hash 0 (random (+ l 1))
-          1 (random (+ l 1))
-          ))
-  (define (make-state) (state (random-action) (make-transition)))
-  (define mutate-state (random l))
-  (match-define (state action dispatch) (hash-ref body mutate-state))
-  (define new-body                                                              
-    (hash-union
-     (hash-set body mutate-state
-               (state action
-                      (hash-set dispatch (random-action) l)))
-     (hash l (make-state))))
-  (automaton head new-body))
-
-(define (random-mem l)
-  (list-ref l (random (length l))))
-
-(define (detach-state a)
-  (match-define (automaton head body) a)
-  (define l (hash-count body))
-  (cond
-   [(= l 1) (mutate-marginally a)]
-   [else (begin
-           (define (random-but n r)
-             (random-mem (remq mutate-state (build-list n values))))
-           (define mutate-state (random l))
-           (define (check-rule rule)
-             (match-define (cons opponent-action reaction) rule)
-             (if (= mutate-state reaction)
-                 (cons opponent-action (random-but l mutate-state))
-                 rule))
-           (define (check-dispatch rules)
-             (apply hash
-                    (flatten
-                     (map check-rule (hash->list rules)))))
-           (define (check-state a-state)
-             (match-define (state action rules) a-state)
-             (struct-copy state a-state [dispatch (check-dispatch rules)]))
-           (define new-body                                                     
-             (for/list([i (in-range l)])
-               (list i
-                     (check-state (hash-ref body i)))))
-           (automaton head (apply hash (flatten new-body))))]))
-
-(define (mutate a)
-  (define r (random 3))
-  (cond [(zero? r) (mutate-marginally a)]
-        [(= r 1) (add-state a)]
-        [(= r 2) (detach-state a)]))
-
-(define (mutates au n)
-  (cond [(zero? n) '()]
-        [else
-         (define new (mutate au))
-         (cons au (mutates new (- n 1)))]))
 
 (define PAYOFF-TABLE
   (list
