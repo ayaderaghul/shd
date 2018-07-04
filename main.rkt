@@ -132,12 +132,12 @@
      (define p5
 ;       (for/list ([pop population])
        (list
-        (evolve-h (first population) rank1 mean1 100 mutation)
-        (evolve-h (second population) rank2 mean2 100 mutation)
-        (evolve-h (third population) rank3 mean3 1 (* 10 mutation))))
+        (evolve-h (first population) rank1 mean1 1 (* 1 mutation))
+        (evolve-h (second population) rank2 mean2 1 (* 1 mutation))
+        (evolve-h (third population) rank3 mean3 1 (* 1 mutation))))
      (evolve p5 (- cycles 1)
              speed mutation mean1 mean2 mean3 rank1 rank2 rank3 p-file sim-id)]))
-
+#|
 (define (evolve-p population cycles speed mutation)
   (cond
     [(zero? cycles) (list population)]
@@ -156,9 +156,9 @@
        (for/list ([pop population])
          (evolve-h pop)))
      (cons (map average pps)
-           (evolve-p (vector-map reset p3) (- cycles 1)
+           (evolve-p (vector-map reset p2) (- cycles 1)
                    speed mutation))]))
-
+|#
 
 (define (main)
   (collect-garbage)

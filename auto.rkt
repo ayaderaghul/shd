@@ -10,6 +10,33 @@
   (random ACTIONS#))
 
 (struct player (payoff dash node) #:transparent)
+;; MUTATION
+;; mutate action or mutate the ignorance state
+;; CHI THIS IS NTH TIMES I REPEAT THIS
+;; NO MATTER WHAT TEMPTING JUSTIFICATION YOU START WITH
+;; MUTATION ALWAYS !!! LEADS TO SUFFERING
+;; define an immutable mutation
+
+(define (new-n new-nodes old-nodes)
+  (apply hash (flatten (append new-nodes old-nodes))))
+(define (set-a-into-d a d n v)
+  (define new-d-nodes
+    (for/list ([i (in-list d)])
+      (list i a)))
+;;  (print "after new d nodes")
+  (define old (remove* d v))
+  (define old-nodes
+    (for/list ([i old])
+      (list i (hash-ref n i))))
+;;  (print "after old-nodes")
+  (new-n new-d-nodes old-nodes))
+(define (set-a-into-node r a n v)
+  (define new-node (list r a))
+  (define old (remove r v))
+  (define old-nodes
+    (for/list ([i old])
+      (list i (hash-ref n i))))
+  (new-n new-node old-nodes))
 
 ;; 4 nodes: 0 1 2 3
 ;; 6 possible dashes: 0-1 0-2 0-3 1-2 1-3 2-3
@@ -18,11 +45,20 @@
 (define (activate-these-dashes nodes#)
   (define dash-list (dashes nodes#))
   (define dashes# (length dash-list))
-  (define connect-this-many (random (+ 1 dashes#)))
+;;  (print "after dash-list")
+  (define r
+    (random (+ dashes# 1)))
+;;  (print "after random")
+  (define connect-this-many
+    (if (and (> dashes# 5) (> r 4))
+        (- r 2)
+        r))
+;;  (print connect-this-many)
   (define (dash-ids counter ids a-list)
     (cond [(zero? counter) ids]
           [else
            (define id (random-member a-list))
+;;           (print "after id")
            (dash-ids (- counter 1) (cons id ids)
                      (remove id a-list))]))
   (sort (dash-ids connect-this-many '() dash-list) #:key car <))
@@ -30,8 +66,8 @@
 (define (make-informed-player nodes#)
   (define nodes
     (for/list ([i (in-range nodes#)])
-      (cons i (random ACTIONS#))))
-  (player 0 '() (make-hash nodes)))
+      (list i (random ACTIONS#))))
+  (player 0 '() (apply hash (flatten nodes))))
 
 ;; some of the dashes are redundant
         
@@ -78,42 +114,47 @@
          (match-define (player p d n) pl)
          (define to-activate (flatten (simplify 
                                        (activate-these-dashes nodes#))))
+;;         (print "after to-act")
          (cond [(null? to-activate) pl]
                [else
-                (for ([i (in-list (rest to-activate))])
-                  (define a (hash-ref n (first to-activate)))
-                  (hash-set! n i a))
-                (player p to-activate n)])]))
+         ;;       (map print to-activate)
+                (define a (hash-ref n (first to-activate)))
+          ;;      (print "after a")
+                (define v (build-list nodes# values))
+                (define new-nodes
+                  (set-a-into-d a to-activate n v))
+         ;;       (print "after new-nodes")
+                (player p to-activate new-nodes)])]))
 
 (define (make-player nodes#)
   (define pl (make-informed-player nodes#))
+;;  (print "after making informed")
   (uninform-player pl nodes#))
 
-(define (p1) (make-player 1))
-(define (p2) (make-player 2))
-(define (p3) (make-player 4))
+;(define (p1) (make-player 1))
+;(define (p2) (make-player 2))
+;(define (p3) (make-player 4))
 
-(define pl1 (p1))
-(define pl2 (p2))
-(define pl3 (p3))
+;(define pl1 (p1))
+;(define pl2 (p2))
+;(define pl3 (p3))
 
 (define (reset pl)
 (match-define (player p d n) pl)
 (player 0 d n))      
 
-;; MUTATION
-;; mutate action or mutate the ignorance state
 
 (define (mutate-action pl)
+;;  (print "mutate action")
   (match-define (player p d n) pl)
   (define nodes# (hash-count n))
+  (define v (build-list nodes# values))
   (define r (random nodes#))
   (define a (random ACTIONS#))
-  (if (member r d) 
-      (for ([i (in-list d)])
-        (hash-set! n i a))
-      (hash-set! n r a))
-  pl)
+  (cond [(member r d)
+         (player p d (set-a-into-d a d n v))]
+        [else
+         (player p d (set-a-into-node r a n v))]))
 
 ;; mutate ignorance state
 
@@ -138,13 +179,16 @@
          (add (cons s ls) (- counter 1) (remove s from))]))
   
 (define (add-node a-list full)
+ ;; (print "add-node")
   (define can-add (remove* a-list full))
+;;(print "remove*")
   (define l (length can-add))
   (define r# (random (+ 1 l)))
   (add a-list r# can-add))
   
 
 (define (mutate-ignorance pl)
+ ;; (print "mutate ignorance")
   (match-define (player p d n) pl)
   (define nodes# (hash-count n))
   (define v (build-list nodes# values))
@@ -164,15 +208,15 @@
         [else
          (define a (first new-d))
          (define act (hash-ref n a))
-         (for ([i (in-list (rest new-d))])
-           (hash-set! n i act))
-         (player p new-d n)]))
+         (define new-nodes
+           (set-a-into-d act new-d n v))
+         (player p new-d new-nodes)]))
            
 
 (define (mutate pl)
   (match-define (player p d n) pl)
   (if (= 1 (hash-count n)) (mutate-action pl)
-      (if (zero? (random 5)) (mutate-action pl) (mutate-ignorance pl))))
+      (if (zero? (random 2)) (mutate-action pl) (mutate-ignorance pl))))
 
 ;; IMMUTABLE MUTATION
 

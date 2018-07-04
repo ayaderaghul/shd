@@ -1,11 +1,11 @@
 #lang racket
 (provide (all-defined-out))
 ;; CONFIGURATION
-(define SIM-ID 2)
+(define SIM-ID 4)
 (define LOCATION 0) ;; 0 home 1 school lab
 
 (define N 100)
-(define CYCLES 5000) ;; careful, you change the cycles here
+(define CYCLES 2000) ;; careful, you change the cycles here
 (define SPEED 10)
 
 (define ROUNDS 1) ;; not here
