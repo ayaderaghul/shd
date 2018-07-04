@@ -1,14 +1,14 @@
 #lang racket
 (provide (all-defined-out))
 ;; CONFIGURATION
-(define SIM-ID 1)
-(define LOCATION 1) ;; 0 home 1 school lab
+(define SIM-ID 2)
+(define LOCATION 0) ;; 0 home 1 school lab
 
-(define N 33)
+(define N 100)
 (define CYCLES 5000) ;; careful, you change the cycles here
 (define SPEED 10)
 
-(define ROUNDS 2) ;; not here
+(define ROUNDS 1) ;; not here
 (define DELTA .01)
 
 (define DELTAstr (string-trim (number->string (* DELTA 100)) ".0"))
@@ -39,5 +39,5 @@
           (if (= location 1) OUTLABstr "")
           "rep-tm-" (number->string id) name))
 
-(define (gen-pic-title)
-  (format "ID = ~s, N = ~s, s = ~s, r = ~s, d = ~s, m = ~s" SIM-ID N SPEED ROUNDS DELTA MUTATION))
+(define (gen-pic-title pl-id)
+  (format "SIM ID = ~s, N = ~s, s = ~s, r = ~s, d = ~s, m = ~s, player = ~s" SIM-ID N SPEED ROUNDS DELTA MUTATION pl-id))

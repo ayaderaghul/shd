@@ -4,9 +4,9 @@
 
 (provide (all-defined-out))
 
-(define b-l 1)
-(define b-m 13)
-(define b-h 21)
+(define b-l -8/3) ;; 1
+(define b-m 4/3) ;; 13
+(define b-h 4) ;; 21
 
 (define (population-mean->lines data)
   (define coors
@@ -37,7 +37,7 @@
     (function (lambda (x) high) #:color "red"))
   (plot (list line1 line2 line3
               (population-mean->lines data))
-        #:y-min 0 #:y-max (+ 5 high) #:width 1200 #:height 800))
+     #:y-min -3 #:y-max (+ 3 high) #:width 1200 #:height 800))
 
 (define (plot-mean data delta rounds pic tit)
   (define low (* b-l (compound delta rounds)))
@@ -50,8 +50,8 @@
   (define line3
     (function (lambda (x) high) #:color "red"))
   (plot (list line1 line2 line3
-              (population-mean->lines data))
-        #:y-min 0 #:y-max (+ 5 high) #:width 1200 #:height 800
+(population-mean->lines data))
+      #:y-min -3 #:y-max (+ 3 high) #:width 1200 #:height 800
         #:out-file pic #:title tit))
 
 
@@ -67,7 +67,7 @@
     (function (lambda (x) high) #:color "red"))
   (plot (list line1 line2 line3
               (mean->lines-i data from to))
-        #:y-min 0 #:y-max (+ 5 high) #:width 1200 #:height 800
+     #:y-min -3 #:y-max (+ 3 high) #:width 1200 #:height 800
         #:out-file pic #:title tit))
 (define (pays->lines data label color)
   (define coors

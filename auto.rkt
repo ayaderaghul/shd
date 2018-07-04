@@ -171,13 +171,12 @@
 
 (define (mutate pl)
   (match-define (player p d n) pl)
-  (define r (random 2))
   (if (= 1 (hash-count n)) (mutate-action pl)
-      (if (zero? r) (mutate-action pl) (mutate-ignorance pl))))
+      (if (zero? (random 5)) (mutate-action pl) (mutate-ignorance pl))))
 
 ;; IMMUTABLE MUTATION
 
-(define PAYOFF-TABLE1
+(define PAYOFF-TABLE
   (list
    (list
     (list (list -8/3 -8/3 -8/3) (list -1 -1 0))
@@ -187,7 +186,7 @@
     (list (list 0 0 4) (list 4/3 4/3 4/3)))
    ))
 
-(define PAYOFF-TABLE
+(define PAYOFF-TABLE1
   (list
    (list
     (list (list 1 1 1) (list 6 6 9))
